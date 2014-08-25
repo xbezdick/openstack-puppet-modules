@@ -146,6 +146,14 @@
 #   pki tokens and revocation lists.
 #   Default: /etc/keystone/ssl/private/cakey.pem
 #
+# [manage_service]
+#   (optional) If Puppet should manage service startup / shutdown.
+#   Defaults to true.
+#
+# [enabled]
+#   (optional) If the keystone services should be enabled.
+#   Defaults to true.
+#
 # [*signing_cert_subject*]
 #   (optional) Certificate subject (auto generated certificate) for token signing.
 #   Defaults to '/C=US/ST=Unset/L=Unset/O=Unset/CN=www.example.com'
@@ -396,6 +404,7 @@ class keystone(
   $ssl_cert_subject       = '/C=US/ST=Unset/L=Unset/O=Unset/CN=localhost',
   $cache_dir              = '/var/cache/keystone',
   $memcache_servers       = false,
+  $manage_service         = true,
   $cache_backend          = 'keystone.common.cache.noop',
   $cache_backend_argument = undef,
   $debug_cache_backend    = false,
@@ -749,10 +758,12 @@ class keystone(
     'DEFAULT/public_workers': value => $public_workers;
   }
 
-  if $enabled {
-    $service_ensure = 'running'
-  } else {
-    $service_ensure = 'stopped'
+  if $manage_service {
+    if $enabled {
+      $service_ensure = 'running'
+    } else {
+      $service_ensure = 'stopped'
+    }
   }
 
   if $service_name == 'keystone' {
