@@ -53,6 +53,20 @@ class nova::compute::rbd (
 
   include nova::params
 
+  # Fedora is the only one that has a different name
+  # for the ceph client package
+  if $::operatingsystem == 'Fedora' {
+    $ceph_package = 'ceph'
+  }
+  else {
+    $ceph_package = 'ceph-common'
+  }
+
+  # Install ceph client libraries
+  package { $ceph_package:
+    ensure => 'installed',
+  }
+
   nova_config {
     'libvirt/images_type':          value => 'rbd';
     'libvirt/images_rbd_pool':      value => $libvirt_images_rbd_pool;
