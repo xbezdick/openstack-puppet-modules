@@ -859,6 +859,13 @@ Puppet::Type.newtype(:firewall) do
       Read-only property for caching the rule line.
     EOS
   end
+  
+  newproperty(:mac_addr) do
+    desc <<-EOS
+      MAC Address
+    EOS
+    newvalues(/^([0-9a-f]{2}[:]){6}$/i)
+  end
 
   autorequire(:firewallchain) do
     reqs = []
