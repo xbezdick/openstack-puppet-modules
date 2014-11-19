@@ -47,22 +47,24 @@
 #
 class swift::proxy(
   $proxy_local_net_ip,
-  $port = '8080',
-  $pipeline = ['healthcheck', 'cache', 'tempauth', 'proxy-server'],
-  $workers = $::processorcount,
-  $allow_account_management = true,
-  $account_autocreate = true,
-  $log_headers = 'False',
-  $log_udp_host = '',
-  $log_udp_port = '',
-  $log_address = '/dev/log',
-  $log_level = 'INFO',
-  $log_facility = 'LOG_LOCAL1',
-  $log_handoffs = true,
-  $read_affinity = undef,
-  $write_affinity = undef,
+  $port                      = '8080',
+  $pipeline                  = ['healthcheck', 'cache', 'tempauth', 'proxy-server'],
+  $workers                   = $::processorcount,
+  $allow_account_management  = true,
+  $account_autocreate        = true,
+  $log_headers               = 'False',
+  $log_udp_host              = '',
+  $log_udp_port              = '',
+  $log_address               = '/dev/log',
+  $log_level                 = 'INFO',
+  $log_facility              = 'LOG_LOCAL1',
+  $log_handoffs              = true,
+  $read_affinity             = undef,
+  $write_affinity            = undef,
   $write_affinity_node_count = undef,
-  $package_ensure = 'present'
+  $manage_service            = true,
+  $enabled                   = true,
+  $package_ensure            = 'present'
 ) {
 
   include swift::params
@@ -126,10 +128,18 @@ class swift::proxy(
     before  => Class[$required_classes],
   }
 
+  if $manage_service {
+    if $enabled {
+      $service_ensure = 'running'
+    } else {
+      $service_ensure = 'stopped'
+    }
+  }
+
   service { 'swift-proxy':
-    ensure    => running,
+    ensure    => $service_ensure,
     name      => $::swift::params::proxy_service_name,
-    enable    => true,
+    enable    => $enabled,
     provider  => $::swift::params::service_provider,
     hasstatus => true,
     subscribe => Concat['/etc/swift/proxy-server.conf'],

@@ -18,6 +18,8 @@
 #
 # Copyright 2011 Puppetlabs Inc, unless otherwise noted.
 define swift::storage::generic(
+  $manage_service   = true,
+  $enabled          = true,
   $package_ensure   = 'present',
   $service_provider = $::swift::params::service_provider
 ) {
@@ -42,19 +44,27 @@ define swift::storage::generic(
     group  => 'swift',
   }
 
+  if $manage_service {
+    if $enabled {
+      $service_ensure = 'running'
+    } else {
+      $service_ensure = 'stopped'
+    }
+  }
+
   service { "swift-${name}":
-    ensure    => running,
+    ensure    => $service_ensure,
     name      => inline_template("<%= scope.lookupvar('::swift::params::${name}_service_name') %>"),
-    enable    => true,
+    enable    => $enabled,
     hasstatus => true,
     provider  => $service_provider,
     subscribe => Package["swift-${name}"],
   }
 
   service { "swift-${name}-replicator":
-    ensure    => running,
+    ensure    => $service_ensure,
     name      => inline_template("<%= scope.lookupvar('::swift::params::${name}_replicator_service_name') %>"),
-    enable    => true,
+    enable    => $enabled,
     hasstatus => true,
     provider  => $service_provider,
     subscribe => Package["swift-${name}"],

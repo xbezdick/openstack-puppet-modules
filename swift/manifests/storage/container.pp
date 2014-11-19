@@ -5,27 +5,39 @@
 #   field for containers. Defaults to one entry list '127.0.0.1'.
 #
 class swift::storage::container(
-  $package_ensure = 'present',
+  $manage_service     = true,
+  $enabled            = true,
+  $package_ensure     = 'present',
   $allowed_sync_hosts = ['127.0.0.1'],
 ) {
   swift::storage::generic { 'container':
+    manage_service => $manage_service,
+    enabled        => $enabled,
     package_ensure => $package_ensure
   }
 
   include swift::params
 
+  if $manage_service {
+    if $enabled {
+      $service_ensure = 'running'
+    } else {
+      $service_ensure = 'stopped'
+    }
+  }
+
   service { 'swift-container-updater':
-    ensure    => running,
+    ensure    => $service_ensure,
     name      => $::swift::params::container_updater_service_name,
-    enable    => true,
+    enable    => $enabled,
     provider  => $::swift::params::service_provider,
     require   => Package['swift-container'],
   }
 
   service { 'swift-container-auditor':
-    ensure    => running,
+    ensure    => $service_ensure,
     name      => $::swift::params::container_auditor_service_name,
-    enable    => true,
+    enable    => $enabled,
     provider  => $::swift::params::service_provider,
     require   => Package['swift-container'],
   }
@@ -41,8 +53,8 @@ class swift::storage::container(
       target => '/lib/init/upstart-job',
     }
     service { 'swift-container-sync':
-      ensure    => running,
-      enable    => true,
+      ensure    => $service_ensure,
+      enable    => $enabled,
       provider  => $::swift::params::service_provider,
       require   => File['/etc/init/swift-container-sync.conf', '/etc/init.d/swift-container-sync']
     }
