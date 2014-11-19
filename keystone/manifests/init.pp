@@ -38,6 +38,11 @@
 #     Defaults to /var/cache/keystone.
 #   [memcache_servers] List of memcache servers/ports. Optional. Used with
 #     token_driver keystone.token.backends.memcache.Token.  Defaults to false.
+#
+#   [manage_service]
+#      (optional) If Puppet should manage service startup / shutdown.
+#      Defaults to true.
+#
 #   [enabled] If the keystone services should be enabled. Optional. Default to true.
 #
 #   [*database_connection*]
@@ -208,6 +213,7 @@ class keystone(
   $ssl_cert_subject      = '/C=US/ST=Unset/L=Unset/O=Unset/CN=localhost',
   $cache_dir             = '/var/cache/keystone',
   $memcache_servers      = false,
+  $manage_service        = true,
   $enabled               = true,
   $database_connection   = 'sqlite:////var/lib/keystone/keystone.db',
   $database_idle_timeout = '200',
@@ -461,10 +467,12 @@ class keystone(
     keystone_config { 'DEFAULT/rabbit_ha_queues': value => false }
   }
 
-  if $enabled {
-    $service_ensure = 'running'
-  } else {
-    $service_ensure = 'stopped'
+  if $manage_service {
+    if $enabled {
+      $service_ensure = 'running'
+    } else {
+      $service_ensure = 'stopped'
+    }
   }
 
   if $service_name == 'keystone' {
