@@ -1,6 +1,7 @@
 # Installs & configure the heat CloudFormation API service
 
 class heat::api_cfn (
+  $manage_service    = true,
   $enabled           = true,
   $bind_host         = '0.0.0.0',
   $bind_port         = '8000',
@@ -32,10 +33,12 @@ class heat::api_cfn (
     name   => $::heat::params::api_cfn_package_name,
   }
 
-  if $enabled {
-    $service_ensure = 'running'
-  } else {
-    $service_ensure = 'stopped'
+  if $manage_service {
+    if $enabled {
+      $service_ensure = 'running'
+    } else {
+      $service_ensure = 'stopped'
+    }
   }
 
   Package['heat-common'] -> Service['heat-api-cfn']

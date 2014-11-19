@@ -1,6 +1,7 @@
 # Installs & configure the heat API service
 
 class heat::api (
+  $manage_service    = true,
   $enabled           = true,
   $bind_host         = '0.0.0.0',
   $bind_port         = '8004',
@@ -32,10 +33,12 @@ class heat::api (
     name   => $::heat::params::api_package_name,
   }
 
-  if $enabled {
-    $service_ensure = 'running'
-  } else {
-    $service_ensure = 'stopped'
+  if $manage_service {
+    if $enabled {
+      $service_ensure = 'running'
+    } else {
+      $service_ensure = 'stopped'
+    }
   }
 
   service { 'heat-api':
