@@ -163,7 +163,7 @@ mod 'tempest',
   :git => 'https://github.com/stackforge/puppet-tempest.git'
 
 mod 'vcsrepo',
-  :commit => '6f7507a2a48ff0a58c7db026760a2eb84e382a77',
+  :commit => 'd721c5ea0a85f24487cb73cc53cc25523d48e700',
   :git => 'https://github.com/puppetlabs/puppetlabs-vcsrepo.git'
 
 mod 'vlan',
