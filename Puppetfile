@@ -58,10 +58,6 @@ mod 'inifile',
   :commit => 'be5fc47f00466a2e6293145b3a0d4fcb586bcf15',
   :git => 'https://github.com/puppetlabs/puppetlabs-inifile.git'
 
-mod 'ipa',
-  :commit => '4a30eb72d5e6025429dbc65dc1b35567c0def5fe',
-  :git => 'https://github.com/xbezdick/puppet-ipa.git'
-
 mod 'ironic',
   :commit => '2edcdcfbcc02e868982f2158d13a75037f8c702e',
   :git => 'https://github.com/stackforge/puppet-ironic.git'
