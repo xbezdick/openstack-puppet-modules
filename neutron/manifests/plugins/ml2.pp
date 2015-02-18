@@ -99,8 +99,9 @@ class neutron::plugins::ml2 (
   $vxlan_group           = '224.0.0.1',
   $vni_ranges            = ['10:100'],
   $enable_security_group = true,
+  $package_ensure        = 'present',
   # DEPRECATED PARAMS
-  $firewall_driver       = undef
+  $firewall_driver       = undef,
 ) {
 
   include neutron::params
@@ -112,7 +113,7 @@ class neutron::plugins::ml2 (
     warning('Without networking mechanism driver, ml2 will not communicate with L2 agents')
   }
 
-  if $::osfamily == 'Debian' {
+  if $::operatingsystem == 'Ubuntu' {
     file_line { '/etc/default/neutron-server:NEUTRON_PLUGIN_CONFIG':
       path    => '/etc/default/neutron-server',
       match   => '^NEUTRON_PLUGIN_CONFIG=(.*)$',
@@ -133,7 +134,7 @@ class neutron::plugins::ml2 (
   # Some platforms do not have a dedicated ml2 plugin package
   if $::neutron::params::ml2_server_package {
     package { 'neutron-plugin-ml2':
-      ensure => present,
+      ensure => $package_ensure,
       name   => $::neutron::params::ml2_server_package,
     }
     Package['neutron-plugin-ml2'] -> Neutron_plugin_ml2<||>

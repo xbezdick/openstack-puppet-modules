@@ -109,7 +109,7 @@ class neutron::plugins::cisco(
     Package['neutron'] -> Neutron_plugin_cisco_l2network<||>
   }
 
-  if $::osfamily == 'Debian' {
+  if $::operatingsystem == 'Ubuntu' {
     file_line { '/etc/default/neutron-server:NEUTRON_PLUGIN_CONFIG':
       path    => '/etc/default/neutron-server',
       match   => '^NEUTRON_PLUGIN_CONFIG=(.*)$',
@@ -164,7 +164,7 @@ class neutron::plugins::cisco(
 
   neutron_plugin_cisco_credentials {
     'keystone/username': value => $keystone_username;
-    'keystone/password': value => $keystone_password;
+    'keystone/password': value => $keystone_password, secret => true;
     'keystone/auth_url': value => $keystone_auth_url;
     'keystone/tenant'  : value => $keystone_tenant;
   }

@@ -79,7 +79,7 @@ mod 'n1k-vsm',
   :git => 'https://github.com/stackforge/puppet-n1k-vsm'
 
 mod 'neutron',
-  :commit => 'd74795561b23a41be1eedf3d8c63bfb9f92360f4',
+  :commit => 'f864f50a61b547ba7f4cf7cfe788a54eb30727e4',
   :git => 'https://github.com/stackforge/puppet-neutron.git'
 
 mod 'nova',

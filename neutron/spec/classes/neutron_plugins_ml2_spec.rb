@@ -36,7 +36,8 @@ describe 'neutron::plugins::ml2' do
       :network_vlan_ranges   => ['10:50'],
       :tunnel_id_ranges      => ['20:100'],
       :vxlan_group           => '224.0.0.1',
-      :vni_ranges            => ['10:100'] }
+      :vni_ranges            => ['10:100'],
+      :package_ensure        => 'present' }
   end
 
   let :params do
@@ -71,7 +72,7 @@ describe 'neutron::plugins::ml2' do
       if platform_params.has_key?(:ml2_server_package)
         should contain_package('neutron-plugin-ml2').with(
           :name   => platform_params[:ml2_server_package],
-          :ensure => 'present'
+          :ensure => p[:package_ensure]
         )
         should contain_package('neutron-plugin-ml2').with_before(/Neutron_plugin_ml2\[.+\]/)
       end
@@ -167,6 +168,35 @@ describe 'neutron::plugins::ml2' do
         expect { subject }.to raise_error(Puppet::Error, /vni ranges are invalid./)
       end
     end
+
+    context 'when overriding package ensure state' do
+      before :each do
+        params.merge!(:package_ensure => 'latest')
+      end
+      it 'overrides package ensure state (if possible)' do
+        if platform_params.has_key?(:ml2_server_package)
+          should contain_package('neutron-plugin-ml2').with(
+            :name   => platform_params[:ml2_server_package],
+            :ensure => params[:package_ensure]
+          )
+        end
+      end
+    end
+
+    context 'on Ubuntu operating systems' do
+      before do
+        facts.merge!({:operatingsystem => 'Ubuntu'})
+      end
+
+      it 'configures /etc/default/neutron-server' do
+        should contain_file_line('/etc/default/neutron-server:NEUTRON_PLUGIN_CONFIG').with(
+          :path    => '/etc/default/neutron-server',
+          :match   => '^NEUTRON_PLUGIN_CONFIG=(.*)$',
+          :line    => 'NEUTRON_PLUGIN_CONFIG=/etc/neutron/plugin.ini',
+          :require => ['File[/etc/neutron/plugin.ini]']
+        )
+      end
+    end
   end
 
   context 'on Debian platforms' do
@@ -176,15 +206,6 @@ describe 'neutron::plugins::ml2' do
 
     let :platform_params do
       {}
-    end
-
-    it 'configures /etc/default/neutron-server' do
-      should contain_file_line('/etc/default/neutron-server:NEUTRON_PLUGIN_CONFIG').with(
-        :path    => '/etc/default/neutron-server',
-        :match   => '^NEUTRON_PLUGIN_CONFIG=(.*)$',
-        :line    => 'NEUTRON_PLUGIN_CONFIG=/etc/neutron/plugin.ini',
-        :require => ['File[/etc/neutron/plugin.ini]']
-      )
     end
 
     context 'on Ubuntu operating systems' do
