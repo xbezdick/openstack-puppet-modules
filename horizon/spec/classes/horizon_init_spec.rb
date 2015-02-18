@@ -63,6 +63,12 @@ describe 'horizon' do
           'COMPRESS_OFFLINE = True',
           "FILE_UPLOAD_TEMP_DIR = '/tmp'"
         ])
+
+        # From internals of verify_contents, get the contents to check for absence of a line
+        content = subject.resource('file', platforms_params[:config_file]).send(:parameters)[:content]
+
+        # With default options, should _not_ have a line to configure SESSION_ENGINE
+        content.should_not match(/^SESSION_ENGINE/)
       end
     end
 
@@ -70,6 +76,7 @@ describe 'horizon' do
       before do
         params.merge!({
           :cache_server_ip         => '10.0.0.1',
+          :django_session_engine   => 'django.contrib.sessions.backends.cache',
           :keystone_default_role   => 'SwiftOperator',
           :keystone_url            => 'https://keystone.example.com:4682',
           :openstack_endpoint_type => 'internalURL',
@@ -79,7 +86,8 @@ describe 'horizon' do
           :compress_offline        => 'False',
           :hypervisor_options      => {'can_set_mount_point' => false, 'can_set_password' => true },
           :neutron_options         => {'enable_lb' => true, 'enable_firewall' => true, 'enable_quotas' => false, 'enable_security_group' => false, 'enable_vpn' => true, 'profile_support' => 'cisco' },
-          :file_upload_temp_dir    => '/var/spool/horizon'
+          :file_upload_temp_dir    => '/var/spool/horizon',
+          :secure_cookies          => true
         })
       end
 
@@ -87,7 +95,10 @@ describe 'horizon' do
         verify_contents(subject, platforms_params[:config_file], [
           'DEBUG = True',
           "ALLOWED_HOSTS = ['*', ]",
+          'CSRF_COOKIE_SECURE = True',
+          'SESSION_COOKIE_SECURE = True',
           "SECRET_KEY = 'elj1IWiLoWHgcyYxFVLj7cM5rGOOxWl0'",
+          'SESSION_ENGINE = "django.contrib.sessions.backends.cache"',
           'OPENSTACK_KEYSTONE_URL = "https://keystone.example.com:4682"',
           'OPENSTACK_KEYSTONE_DEFAULT_ROLE = "SwiftOperator"',
           "    'can_set_mount_point': False,",
@@ -190,6 +201,30 @@ describe 'horizon' do
           "    ('http://region-1.example.com:5000/v2.0', 'Region-1'),",
           "    ('http://region-2.example.com:5000/v2.0', 'Region-2'),",
           "]"
+        ])
+      end
+    end
+
+    context 'with policy parameters' do
+      before do
+        params.merge!({
+          :policy_files_path => '/opt/openstack-dashboard',
+          :policy_files      => {
+            'identity' => 'keystone_policy.json',
+            'compute'  => 'nova_policy.json',
+            'network'  => 'neutron_policy.json',
+          }
+        })
+      end
+
+      it 'POLICY_FILES_PATH and POLICY_FILES are configured' do
+        verify_contents(subject, platforms_params[:config_file], [
+          "POLICY_FILES_PATH = '/opt/openstack-dashboard'",
+          "POLICY_FILES = {",
+          "    'identity': 'keystone_policy.json',",
+          "    'compute': 'nova_policy.json',",
+          "    'network': 'neutron_policy.json',",
+          "} # POLICY_FILES"
         ])
       end
     end
