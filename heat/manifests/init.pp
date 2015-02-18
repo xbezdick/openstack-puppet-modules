@@ -141,6 +141,19 @@ class heat(
 
   include heat::params
 
+  if $kombu_ssl_ca_certs and !$rabbit_use_ssl {
+    fail('The kombu_ssl_ca_certs parameter requires rabbit_use_ssl to be set to true')
+  }
+  if $kombu_ssl_certfile and !$rabbit_use_ssl {
+    fail('The kombu_ssl_certfile parameter requires rabbit_use_ssl to be set to true')
+  }
+  if $kombu_ssl_keyfile and !$rabbit_use_ssl {
+    fail('The kombu_ssl_keyfile parameter requires rabbit_use_ssl to be set to true')
+  }
+  if ($kombu_ssl_certfile and !$kombu_ssl_keyfile) or ($kombu_ssl_keyfile and !$kombu_ssl_certfile) {
+    fail('The kombu_ssl_certfile and kombu_ssl_keyfile parameters must be used together')
+  }
+
   File {
     require => Package['heat-common'],
   }
@@ -202,32 +215,38 @@ class heat(
 
     heat_config {
       'DEFAULT/rabbit_userid'          : value => $rabbit_userid;
-      'DEFAULT/rabbit_password'        : value => $rabbit_password;
+      'DEFAULT/rabbit_password'        : value => $rabbit_password, secret => true;
       'DEFAULT/rabbit_virtual_host'    : value => $rabbit_virtual_host;
       'DEFAULT/rabbit_use_ssl'         : value => $rabbit_use_ssl;
       'DEFAULT/amqp_durable_queues'    : value => $amqp_durable_queues;
     }
 
     if $rabbit_use_ssl {
-      heat_config { 'DEFAULT/kombu_ssl_version': value => $kombu_ssl_version }
 
       if $kombu_ssl_ca_certs {
-        heat_config { 'DEFAULT/kombu_ssl_ca_certs': value => $kombu_ssl_ca_certs }
+        heat_config { 'DEFAULT/kombu_ssl_ca_certs': value => $kombu_ssl_ca_certs; }
       } else {
-        heat_config { 'DEFAULT/kombu_ssl_ca_certs': ensure => absent}
+        heat_config { 'DEFAULT/kombu_ssl_ca_certs': ensure => absent; }
       }
 
-      if $kombu_ssl_certfile {
-        heat_config { 'DEFAULT/kombu_ssl_certfile': value => $kombu_ssl_certfile }
+      if $kombu_ssl_certfile or $kombu_ssl_keyfile {
+        heat_config {
+          'DEFAULT/kombu_ssl_certfile': value => $kombu_ssl_certfile;
+          'DEFAULT/kombu_ssl_keyfile':  value => $kombu_ssl_keyfile;
+        }
       } else {
-        heat_config { 'DEFAULT/kombu_ssl_certfile': ensure => absent}
+        heat_config {
+          'DEFAULT/kombu_ssl_certfile': ensure => absent;
+          'DEFAULT/kombu_ssl_keyfile':  ensure => absent;
+        }
       }
 
-      if $kombu_ssl_keyfile {
-        heat_config { 'DEFAULT/kombu_ssl_keyfile': value => $kombu_ssl_keyfile }
+      if $kombu_ssl_version {
+        heat_config { 'DEFAULT/kombu_ssl_version':  value => $kombu_ssl_version; }
       } else {
-        heat_config { 'DEFAULT/kombu_ssl_keyfile': ensure => absent}
+        heat_config { 'DEFAULT/kombu_ssl_version':  ensure => absent; }
       }
+
     } else {
       heat_config {
         'DEFAULT/kombu_ssl_version':  ensure => absent;
@@ -235,10 +254,8 @@ class heat(
         'DEFAULT/kombu_ssl_certfile': ensure => absent;
         'DEFAULT/kombu_ssl_keyfile':  ensure => absent;
       }
-      if ($kombu_ssl_keyfile or $kombu_ssl_certfile or $kombu_ssl_ca_certs) {
-        notice('Configuration of certificates with $rabbit_use_ssl == false is a useless config')
-      }
     }
+
   }
 
   if $rpc_backend == 'heat.openstack.common.rpc.impl_qpid' {
@@ -247,7 +264,7 @@ class heat(
       'DEFAULT/qpid_hostname'               : value => $qpid_hostname;
       'DEFAULT/qpid_port'                   : value => $qpid_port;
       'DEFAULT/qpid_username'               : value => $qpid_username;
-      'DEFAULT/qpid_password'               : value => $qpid_password;
+      'DEFAULT/qpid_password'               : value => $qpid_password, secret => true;
       'DEFAULT/qpid_heartbeat'              : value => $qpid_heartbeat;
       'DEFAULT/qpid_protocol'               : value => $qpid_protocol;
       'DEFAULT/qpid_tcp_nodelay'            : value => $qpid_tcp_nodelay;
@@ -326,7 +343,7 @@ class heat(
     }
 
     heat_config {
-      'database/connection': value => $sql_connection;
+      'database/connection': value => $sql_connection, secret => true;
       'database/idle_timeout':  value => $database_idle_timeout;
     }
 
