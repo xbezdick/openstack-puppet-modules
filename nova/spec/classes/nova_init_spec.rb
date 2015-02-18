@@ -22,13 +22,13 @@ describe 'nova' do
         )
       end
 
-      it 'creates user and group' do
-        should contain_group('nova').with(
+      it 'does not create user and group' do
+        should_not contain_group('nova').with(
           :ensure  => 'present',
           :system  => true,
           :before  => 'User[nova]'
         )
-        should contain_user('nova').with(
+        should_not contain_user('nova').with(
           :ensure     => 'present',
           :system     => true,
           :groups     => 'nova',
@@ -96,6 +96,7 @@ describe 'nova' do
         should contain_nova_config('DEFAULT/service_down_time').with_value('60')
         should contain_nova_config('DEFAULT/rootwrap_config').with_value('/etc/nova/rootwrap.conf')
         should contain_nova_config('DEFAULT/report_interval').with_value('10')
+        should contain_nova_config('DEFAULT/os_region_name').with_ensure('absent')
       end
 
       it 'installs utilities' do
@@ -133,7 +134,8 @@ describe 'nova' do
           :nova_user_id             => '499',
           :nova_group_id            => '499',
           :report_interval          => '60',
-          :nova_shell               => '/bin/bash' }
+          :nova_shell               => '/bin/bash',
+          :os_region_name           => 'MyRegion' }
       end
 
       it 'creates user and group' do
@@ -141,7 +143,7 @@ describe 'nova' do
           :ensure  => 'present',
           :system  => true,
           :gid     => '499',
-          :before  => 'User[nova]'
+          :before  => 'Package[nova-common]'
         )
         should contain_user('nova').with(
           :ensure     => 'present',
@@ -151,7 +153,8 @@ describe 'nova' do
           :managehome => false,
           :shell      => '/bin/bash',
           :uid        => '499',
-          :gid        => '499'
+          :gid        => '499',
+          :require    => 'Group[nova]'
         )
       end
 
@@ -199,6 +202,7 @@ describe 'nova' do
         should contain_nova_config('DEFAULT/notification_topics').with_value('openstack')
         should contain_nova_config('DEFAULT/notify_api_faults').with_value(true)
         should contain_nova_config('DEFAULT/report_interval').with_value('60')
+        should contain_nova_config('DEFAULT/os_region_name').with_value('MyRegion')
       end
 
       context 'with multiple notification_driver' do
@@ -349,7 +353,7 @@ describe 'nova' do
       end
     end
 
-    context 'with amqp ssl parameters' do
+    context 'with rabbit ssl enabled with kombu' do
       let :params do
         { :rabbit_hosts       => ['rabbit:5673'],
           :rabbit_use_ssl     => 'true',
@@ -365,6 +369,39 @@ describe 'nova' do
         should contain_nova_config('DEFAULT/kombu_ssl_certfile').with_value('/etc/certfile')
         should contain_nova_config('DEFAULT/kombu_ssl_keyfile').with_value('/etc/key')
         should contain_nova_config('DEFAULT/kombu_ssl_version').with_value('TLSv1')
+      end
+    end
+
+    context 'with rabbit ssl enabled without kombu' do
+      let :params do
+        { :rabbit_hosts       => ['rabbit:5673'],
+          :rabbit_use_ssl     => 'true', }
+      end
+
+      it 'configures rabbit' do
+        should contain_nova_config('DEFAULT/rabbit_use_ssl').with_value(true)
+        should contain_nova_config('DEFAULT/kombu_ssl_ca_certs').with_ensure('absent')
+        should contain_nova_config('DEFAULT/kombu_ssl_certfile').with_ensure('absent')
+        should contain_nova_config('DEFAULT/kombu_ssl_keyfile').with_ensure('absent')
+        should contain_nova_config('DEFAULT/kombu_ssl_version').with_value('SSLv3')
+      end
+    end
+
+    context 'with rabbit ssl disabled' do
+      let :params do
+        {
+          :rabbit_password    => 'pass',
+          :rabbit_use_ssl     => false,
+          :kombu_ssl_version  => 'SSLv3',
+        }
+      end
+
+      it 'configures rabbit' do
+        should contain_nova_config('DEFAULT/rabbit_use_ssl').with_value('false')
+        should contain_nova_config('DEFAULT/kombu_ssl_ca_certs').with_ensure('absent')
+        should contain_nova_config('DEFAULT/kombu_ssl_certfile').with_ensure('absent')
+        should contain_nova_config('DEFAULT/kombu_ssl_keyfile').with_ensure('absent')
+        should contain_nova_config('DEFAULT/kombu_ssl_version').with_ensure('absent')
       end
     end
 
@@ -539,14 +576,14 @@ describe 'nova' do
       let :params do
         {
           :use_ssl          => true,
-          :enabled_ssl_apis => ['ec2'],
+          :enabled_ssl_apis => ['ec2', 'osapi_compute'],
           :cert_file        => '/path/to/cert',
           :ca_file          => '/path/to/ca',
           :key_file         => '/path/to/key',
         }
       end
 
-      it { should contain_nova_config('DEFAULT/enabled_ssl_apis').with_value(['ec2']) }
+      it { should contain_nova_config('DEFAULT/enabled_ssl_apis').with_value('ec2,osapi_compute') }
       it { should contain_nova_config('DEFAULT/ssl_ca_file').with_value('/path/to/ca') }
       it { should contain_nova_config('DEFAULT/ssl_cert_file').with_value('/path/to/cert') }
       it { should contain_nova_config('DEFAULT/ssl_key_file').with_value('/path/to/key') }

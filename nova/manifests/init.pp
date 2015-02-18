@@ -200,14 +200,22 @@
 #   (optional) Create the nova user with the specified gid.
 #   Changing to a new uid after specifying a different uid previously,
 #   or using this option after the nova account already exists will break
-#   the ownership of all files/dirs owned by nova.
+#   the ownership of all files/dirs owned by nova. It is strongly encouraged
+#   not to use this option and instead create user before nova class or
+#   for network shares create netgroup into which you'll put nova on all the
+#   nodes. If undef no user will be created and user creation will standardly
+#   happen in nova-common package.
 #   Defaults to undef.
 #
 # [*nova_group_id*]
 #   (optional) Create the nova user with the specified gid.
 #   Changing to a new uid after specifying a different uid previously,
 #   or using this option after the nova account already exists will break
-#   the ownership of all files/dirs owned by nova.
+#   the ownership of all files/dirs owned by nova. It is strongly encouraged
+#   not to use this option and instead create group before nova class or for
+#   network shares create netgroup into which you'll put nova on all the
+#   nodes. If undef no user or group will be created and creation will
+#   happen in nova-common package.
 #   Defaults to undef.
 #
 # [*nova_public_key*]
@@ -252,6 +260,13 @@
 #   for notifications on VM and task state changes.
 #   Defaults to undef
 #
+# [*os_region_name*]
+#   (optional) Sets the os_region_name flag. For environments with
+#   more than one endpoint per service, this is required to make
+#   things such as cinder volume attach work. If you don't set this
+#   and you have multiple endpoints, you will get AmbiguousEndpoint
+#   exceptions in the nova API service.
+#   Defaults to undef
 class nova(
   $ensure_package           = 'present',
   $database_connection      = false,
@@ -319,6 +334,7 @@ class nova(
   $sql_connection           = false,
   $sql_idle_timeout         = false,
   $logdir                   = false,
+  $os_region_name           = undef,
 ) inherits nova::params {
 
   if $nova_cluster_id {
@@ -339,22 +355,42 @@ class nova(
     }
   }
 
-  group { 'nova':
-    ensure  => present,
-    system  => true,
-    gid     => $nova_group_id,
-    before  => User['nova'],
+  if $kombu_ssl_ca_certs and !$rabbit_use_ssl {
+    fail('The kombu_ssl_ca_certs parameter requires rabbit_use_ssl to be set to true')
+  }
+  if $kombu_ssl_certfile and !$rabbit_use_ssl {
+    fail('The kombu_ssl_certfile parameter requires rabbit_use_ssl to be set to true')
+  }
+  if $kombu_ssl_keyfile and !$rabbit_use_ssl {
+    fail('The kombu_ssl_keyfile parameter requires rabbit_use_ssl to be set to true')
+  }
+  if ($kombu_ssl_certfile and !$kombu_ssl_keyfile) or ($kombu_ssl_keyfile and !$kombu_ssl_certfile) {
+    fail('The kombu_ssl_certfile and kombu_ssl_keyfile parameters must be used together')
   }
 
-  user { 'nova':
-    ensure     => present,
-    system     => true,
-    groups     => 'nova',
-    home       => '/var/lib/nova',
-    managehome => false,
-    shell      => $nova_shell,
-    uid        => $nova_user_id,
-    gid        => $nova_group_id,
+  if $nova_group_id {
+    warning('The nova_group_id will be deprecated, please create group manually')
+    group { 'nova':
+      ensure  => present,
+      system  => true,
+      gid     => $nova_group_id,
+      before  => Package['nova-common'],
+    }
+  }
+  if $nova_user_id {
+    warning('The nova_user_id will be deprecated, please create user manually')
+    user { 'nova':
+      ensure     => present,
+      system     => true,
+      groups     => 'nova',
+      home       => '/var/lib/nova',
+      managehome => false,
+      shell      => $nova_shell,
+      uid        => $nova_user_id,
+      gid        => $nova_group_id,
+      before     => Package['nova-common'],
+      require    => Group['nova'],
+    }
   }
 
   if $nova_public_key or $nova_private_key {
@@ -445,7 +481,7 @@ class nova(
   package { 'nova-common':
     ensure  => $ensure_package,
     name    => $::nova::params::common_package_name,
-    require => [Package['python-nova'], Anchor['nova-start'], User['nova']]
+    require => [Package['python-nova'], Anchor['nova-start']]
   }
 
   file { '/etc/nova/nova.conf':
@@ -523,29 +559,31 @@ class nova(
     }
 
     if $rabbit_use_ssl {
+
       if $kombu_ssl_ca_certs {
-        nova_config { 'DEFAULT/kombu_ssl_ca_certs': value => $kombu_ssl_ca_certs }
+        nova_config { 'DEFAULT/kombu_ssl_ca_certs': value => $kombu_ssl_ca_certs; }
       } else {
-        nova_config { 'DEFAULT/kombu_ssl_ca_certs': ensure => absent}
+        nova_config { 'DEFAULT/kombu_ssl_ca_certs': ensure => absent; }
       }
 
-      if $kombu_ssl_certfile {
-        nova_config { 'DEFAULT/kombu_ssl_certfile': value => $kombu_ssl_certfile }
+      if $kombu_ssl_certfile or $kombu_ssl_keyfile {
+        nova_config {
+          'DEFAULT/kombu_ssl_certfile': value => $kombu_ssl_certfile;
+          'DEFAULT/kombu_ssl_keyfile':  value => $kombu_ssl_keyfile;
+        }
       } else {
-        nova_config { 'DEFAULT/kombu_ssl_certfile': ensure => absent}
-      }
-
-      if $kombu_ssl_keyfile {
-        nova_config { 'DEFAULT/kombu_ssl_keyfile': value => $kombu_ssl_keyfile }
-      } else {
-        nova_config { 'DEFAULT/kombu_ssl_keyfile': ensure => absent}
+        nova_config {
+          'DEFAULT/kombu_ssl_certfile': ensure => absent;
+          'DEFAULT/kombu_ssl_keyfile':  ensure => absent;
+        }
       }
 
       if $kombu_ssl_version {
-        nova_config { 'DEFAULT/kombu_ssl_version': value => $kombu_ssl_version }
+        nova_config { 'DEFAULT/kombu_ssl_version':  value => $kombu_ssl_version; }
       } else {
-        nova_config { 'DEFAULT/kombu_ssl_version': ensure => absent}
+        nova_config { 'DEFAULT/kombu_ssl_version':  ensure => absent; }
       }
+
     } else {
       nova_config {
         'DEFAULT/kombu_ssl_ca_certs': ensure => absent;
@@ -596,7 +634,7 @@ class nova(
   # SSL Options
   if $use_ssl {
     nova_config {
-      'DEFAULT/enabled_ssl_apis' : value => $enabled_ssl_apis;
+      'DEFAULT/enabled_ssl_apis' : value => join($enabled_ssl_apis, ',');
       'DEFAULT/ssl_cert_file' :    value => $cert_file;
       'DEFAULT/ssl_key_file' :     value => $key_file;
     }
@@ -677,6 +715,17 @@ class nova(
   } else {
     nova_config {
       'DEFAULT/use_syslog':           value => false;
+    }
+  }
+
+  if $os_region_name {
+    nova_config {
+      'DEFAULT/os_region_name':       value => $os_region_name;
+    }
+  }
+  else {
+    nova_config {
+      'DEFAULT/os_region_name':       ensure => absent;
     }
   }
 
