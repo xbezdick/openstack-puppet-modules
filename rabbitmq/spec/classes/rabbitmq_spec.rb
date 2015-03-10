@@ -30,8 +30,141 @@ describe 'rabbitmq' do
   context 'on Debian' do
     let(:params) {{ :manage_repos => false }}
     let(:facts) {{ :osfamily => 'Debian', :lsbdistid => 'Debian', :lsbdistcodename => 'squeeze' }}
-    it 'does not include rabbitmq::repo::apt when manage_repos is false' do
-      should_not contain_class('rabbitmq::repo::apt')
+    it 'does ensure rabbitmq apt::source is absent when manage_repos is false' do
+      should_not contain_apt__source('rabbitmq')
+    end
+  end
+
+  context 'on Debian' do
+    let(:params) {{ :manage_repos => true }}
+    let(:facts) {{ :osfamily => 'Debian', :lsbdistid => 'Debian', :lsbdistcodename => 'squeeze' }}
+
+    it 'includes rabbitmq::repo::apt' do
+      should contain_class('rabbitmq::repo::apt')
+    end
+
+    describe 'apt::source default values' do
+      it 'should add a repo with defaults values' do
+        should contain_apt__source('rabbitmq').with( {
+          :ensure   => 'present',
+          :location => 'http://www.rabbitmq.com/debian/',
+          :release  => 'testing',
+          :repos    => 'main',
+        })
+      end
+    end
+  end
+
+  context 'on Debian' do
+    let(:params) {{ :repos_ensure => false }}
+    let(:facts) {{ :osfamily => 'Debian', :lsbdistid => 'Debian', :lsbdistcodename => 'squeeze' }}
+    it 'does ensure rabbitmq apt::source is absent when repos_ensure is false' do
+      should contain_apt__source('rabbitmq').with(
+        'ensure'  => 'absent'
+      )
+    end
+  end
+
+  context 'on Debian' do
+    let(:params) {{ :repos_ensure => true }}
+    let(:facts) {{ :osfamily => 'Debian', :lsbdistid => 'Debian', :lsbdistcodename => 'squeeze' }}
+
+    it 'includes rabbitmq::repo::apt' do
+      should contain_class('rabbitmq::repo::apt')
+    end
+
+    describe 'apt::source default values' do
+      it 'should add a repo with defaults values' do
+        should contain_apt__source('rabbitmq').with( {
+          :ensure   => 'present',
+          :location => 'http://www.rabbitmq.com/debian/',
+          :release  => 'testing',
+          :repos    => 'main',
+        })
+      end
+    end
+  end
+
+  context 'on Debian' do
+    let(:params) {{ :manage_repos => true, :repos_ensure => false }}
+    let(:facts) {{ :osfamily => 'Debian', :lsbdistid => 'Debian', :lsbdistcodename => 'squeeze' }}
+
+    it 'includes rabbitmq::repo::apt' do
+      should contain_class('rabbitmq::repo::apt')
+    end
+
+    describe 'apt::source default values' do
+      it 'should add a repo with defaults values' do
+        should contain_apt__source('rabbitmq').with( {
+          :ensure => 'absent',
+        })
+      end
+    end
+  end
+
+  context 'on Debian' do
+    let(:params) {{ :manage_repos => true, :repos_ensure => true }}
+    let(:facts) {{ :osfamily => 'Debian', :lsbdistid => 'Debian', :lsbdistcodename => 'squeeze' }}
+
+    it 'includes rabbitmq::repo::apt' do
+      should contain_class('rabbitmq::repo::apt')
+    end
+
+    describe 'apt::source default values' do
+      it 'should add a repo with defaults values' do
+        should contain_apt__source('rabbitmq').with( {
+          :ensure   => 'present',
+          :location => 'http://www.rabbitmq.com/debian/',
+          :release  => 'testing',
+          :repos    => 'main',
+        })
+      end
+    end
+  end
+
+  context 'on Debian' do
+    let(:params) {{ :manage_repos => false, :repos_ensure => true }}
+    let(:facts) {{ :osfamily => 'Debian', :lsbdistid => 'Debian', :lsbdistcodename => 'squeeze' }}
+    it 'does ensure rabbitmq apt::source is absent when manage_repos is false and repos_ensure is true' do
+      should_not contain_apt__source('rabbitmq')
+    end
+  end
+
+  context 'on Debian' do
+    let(:facts) {{ :osfamily => 'Debian', :lsbdistid => 'Debian', :lsbdistcodename => 'squeeze' }}
+    context 'with manage_repos => false and repos_ensure => false' do
+      let(:params) {{ :manage_repos => false, :repos_ensure => false }}
+      it 'does ensure rabbitmq apt::source is absent when manage_repos is false and repos_ensure is false' do
+        should_not contain_apt__source('rabbitmq')
+      end
+    end
+
+    context 'with file_limit => unlimited' do
+      let(:params) {{ :file_limit => 'unlimited' }}
+      it { should contain_file('/etc/default/rabbitmq-server').with_content(/ulimit -n unlimited/) }
+    end
+
+    context 'with file_limit => infinity' do
+      let(:params) {{ :file_limit => 'infinity' }}
+      it { should contain_file('/etc/default/rabbitmq-server').with_content(/ulimit -n infinity/) }
+    end
+
+    context 'with file_limit => -1' do
+      let(:params) {{ :file_limit => -1 }}
+      it { should contain_file('/etc/default/rabbitmq-server').with_content(/ulimit -n -1/) }
+    end
+
+    context 'with file_limit => \'1234\'' do
+      let(:params) {{ :file_limit => '1234' }}
+      it { should contain_file('/etc/default/rabbitmq-server').with_content(/ulimit -n 1234/) }
+    end
+
+    context 'with file_limit => foo' do
+      let(:params) {{ :file_limit => 'foo' }}
+      it 'does not compile' do
+        expect{subject}.to raise_error(/\$file_limit must be an integer, 'unlimited', or 'infinity'/)
+      end
+>>>>>>> 4ec851b... Fixes for file_limit:spec/classes/rabbitmq_spec.rb
     end
   end
 
@@ -63,8 +196,7 @@ describe 'rabbitmq' do
       it { should contain_class('rabbitmq::config') }
       it { should contain_class('rabbitmq::service') }
 
-
-      context 'with admin_enable set to true' do
+     context 'with admin_enable set to true' do
         let(:params) {{ :admin_enable => true }}
         context 'with service_manage set to true' do
           it 'we enable the admin interface by default' do
