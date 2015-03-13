@@ -32,7 +32,12 @@ end
 #   A parsed URL (returned from URI.parse)
 def handle_request(req, url)
     begin
-        http = Net::HTTP.new(url.host, url.port)
+        # There is issue with ipv6 where address has to be in brackets, this causes the
+        # underlying ruby TCPSocket to fail. Net::HTTP.new will fail without brackets on
+        # jojning the ipv6 address with :port or passing brackets to TCPSocket. It was
+        # found that if we use Net::HTTP.start with url.hostname the incriminated code
+        # won't be hit.
+        http = Net::HTTP.start(url.hostname, url.port)
         http.use_ssl = url.scheme == 'https'
         res = http.request(req)
 
