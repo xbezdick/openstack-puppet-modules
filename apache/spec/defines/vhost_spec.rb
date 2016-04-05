@@ -157,6 +157,7 @@ describe 'apache::vhost', :type => :define do
           'ssl_proxy_verify'            => 'require',
           'ssl_proxy_check_peer_cn'     => 'on',
           'ssl_proxy_check_peer_name'   => 'on',
+          'ssl_proxy_check_peer_expire' => 'on',
           'ssl_proxyengine'             => true,
           'ssl_proxy_protocol'          => 'TLSv1.2',
 
@@ -338,6 +339,7 @@ describe 'apache::vhost', :type => :define do
           'passenger_min_instances'     => '1',
           'passenger_start_timeout'     => '600',
           'passenger_pre_start'         => 'http://localhost/myapp',
+          'passenger_high_performance'  => true,
           'passenger_user'              => 'sandbox',
           'add_default_charset'         => 'UTF-8',
           'jk_mounts'                   => [
@@ -476,6 +478,8 @@ describe 'apache::vhost', :type => :define do
         :content => /^\s+SSLProxyCheckPeerCN\s+on$/ ) }
       it { is_expected.to contain_concat__fragment('rspec.example.com-sslproxy').with(
         :content => /^\s+SSLProxyCheckPeerName\s+on$/ ) }
+      it { is_expected.to contain_concat__fragment('rspec.example.com-sslproxy').with(
+        :content => /^\s+SSLProxyCheckPeerExpire\s+on$/ ) }
       it { is_expected.to contain_concat__fragment('rspec.example.com-sslproxy').with(
         :content => /^\s+SSLProxyProtocol\s+TLSv1.2$/ ) }
       it { is_expected.to contain_concat__fragment('rspec.example.com-suphp') }

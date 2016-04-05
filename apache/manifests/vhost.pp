@@ -28,6 +28,7 @@ define apache::vhost(
   $ssl_proxy_verify            = undef,
   $ssl_proxy_check_peer_cn     = undef,
   $ssl_proxy_check_peer_name   = undef,
+  $ssl_proxy_check_peer_expire = undef,
   $ssl_proxy_machine_cert      = undef,
   $ssl_proxy_protocol          = undef,
   $ssl_options                 = undef,
@@ -126,6 +127,7 @@ define apache::vhost(
   $passenger_start_timeout     = undef,
   $passenger_pre_start         = undef,
   $passenger_user              = undef,
+  $passenger_high_performance  = undef,
   $add_default_charset         = undef,
   $modsec_disable_vhost        = undef,
   $modsec_disable_ids          = undef,
@@ -253,6 +255,10 @@ define apache::vhost(
     validate_re($ssl_proxy_check_peer_name,'(^on$|^off$)',"${ssl_proxy_check_peer_name} is not permitted for ssl_proxy_check_peer_name. Allowed values are 'on' or 'off'.")
   }
 
+  if $ssl_proxy_check_peer_expire {
+    validate_re($ssl_proxy_check_peer_expire,'(^on$|^off$)',"${ssl_proxy_check_peer_expire} is not permitted for ssl_proxy_check_peer_expire. Allowed values are 'on' or 'off'.")
+  }
+
   # Input validation ends
 
   if $ssl and $ensure == 'present' {
@@ -277,7 +283,7 @@ define apache::vhost(
     include ::apache::mod::suexec
   }
 
-  if $passenger_app_root or $passenger_app_env or $passenger_ruby or $passenger_min_instances or $passenger_start_timeout or $passenger_pre_start or $passenger_user {
+  if $passenger_app_root or $passenger_app_env or $passenger_ruby or $passenger_min_instances or $passenger_start_timeout or $passenger_pre_start or $passenger_user or $passenger_high_performance {
     include ::apache::mod::passenger
   }
 
@@ -493,6 +499,8 @@ define apache::vhost(
     }
 
     $_directories = [ merge($_directory, $_directory_version) ]
+  } else {
+    $_directories = undef
   }
 
   ## Create a global LocationMatch if locations aren't defined
@@ -840,6 +848,7 @@ define apache::vhost(
   # - $ssl_proxy_verify
   # - $ssl_proxy_check_peer_cn
   # - $ssl_proxy_check_peer_name
+  # - $ssl_proxy_check_peer_expire
   # - $ssl_proxy_machine_cert
   # - $ssl_proxy_protocol
   if $ssl_proxyengine {

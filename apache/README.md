@@ -1660,7 +1660,7 @@ Installs [Apache SSL features][`mod_ssl`] and uses the `ssl.conf.erb` template t
 - `ssl_cipher`: Default: 'HIGH:MEDIUM:!aNULL:!MD5:!RC4'.
 - `ssl_compression`: Default: false.
 - `ssl_cryptodevice`: Default: 'builtin'.
-- `ssl_honorcipherorder`: Default: 'On'.
+- `ssl_honorcipherorder`: Default: true.
 - `ssl_openssl_conf_cmd`: Default: undef.
 - `ssl_options`: Default: [ 'StdEnvVars' ]
 - `ssl_pass_phrase_dialog`: Default: 'builtin'.
@@ -1706,6 +1706,7 @@ ${modsec\_dir}/activated\_rules.
 - `modsec_secruleengine`: Configures the modsec rules engine. Valid options: 'On', 'Off', and 'DetectionOnly'. Default: `modsec_secruleengine` in [`apache::params`][].
 - `restricted_extensions`: A space-separated list of prohibited file extensions. Default: '.asa/ .asax/ .ascx/ .axd/ .backup/ .bak/ .bat/ .cdx/ .cer/ .cfg/ .cmd/ .com/ .config/ .conf/ .cs/ .csproj/ .csr/ .dat/ .db/ .dbf/ .dll/ .dos/ .htr/ .htw/ .ida/ .idc/ .idq/ .inc/ .ini/ .key/ .licx/ .lnk/ .log/ .mdb/ .old/ .pass/ .pdb/ .pol/ .printer/ .pwd/ .resources/ .resx/ .sql/ .sys/ .vb/ .vbs/ .vbproj/ .vsdisco/ .webinfo/ .xsd/ .xsx/'.
 - `restricted_headers`: A list of restricted headers separated by slashes and spaces. Default: 'Proxy-Connection/ /Lock-Token/ /Content-Range/ /Translate/ /via/ /if/'.
+- `secdefaultaction`: Configures the Mode of Operation, Self-Contained ('deny') vs. Collaborative Detection ('pass'), for the OWASP ModSecurity Core Rule Set. Default: 'deny'.
 - `secpcrematchlimit`: Sets the number for the match limit in the PCRE library. Default: '1500'
 - `secpcrematchlimitrecursion`: Sets the number for the match limit recursion in the PCRE library. Default: '1500'
 - `audit_log_parts`: Sets the sections to be put in the [audit log][]. Default: 'ABIJDEFHZ'
@@ -2310,6 +2311,10 @@ Sets [PassengerAppEnv](https://www.phusionpassenger.com/library/config/apache/re
 
 By default, Passenger log messages are written to the Apache global error log. With [PassengerLogFile](https://www.phusionpassenger.com/library/config/apache/reference/#passengerlogfile), you can configure those messages to be logged to a different file. This option is only available since Passenger 5.0.5.
 
+##### `passenger_log_level`
+
+This option allows to specify how much information should be written to the log file. If not set, [PassengerLogLevel](https://www.phusionpassenger.com/library/config/apache/reference/#passengerloglevel) will not show up in the configuration file and the defaults are used. For Passenger > 3.0.0 the default is '0', since 5.0.0 it's '3'.
+
 ##### `passenger_ruby`
 
 Sets [PassengerRuby](https://www.phusionpassenger.com/library/config/apache/reference/#passengerruby), the Ruby interpreter to use for the application, on this virtual host.
@@ -2329,6 +2334,10 @@ Sets [PassengerPreStart](https://www.phusionpassenger.com/library/config/apache/
 ##### `passenger_user`
 
 Sets [PassengerUser](https://www.phusionpassenger.com/library/config/apache/reference/#passengeruser), the running user for sandboxing applications.
+
+##### `passenger_high_performance`
+
+Sets the [`PassengerHighPerformance`](https://www.phusionpassenger.com/library/config/apache/reference/#passengerhighperformance) parameter. Valid options: 'true', 'false'. Default: undef.
 
 ##### `php_flags & values`
 
@@ -2804,6 +2813,10 @@ Sets the value for [AuthType](https://httpd.apache.org/docs/current/mod/mod_auth
 
 Sets the value for [AuthUserFile](https://httpd.apache.org/docs/current/mod/mod_authn_file.html#authuserfile), which sets the name of the text file containing the users/passwords for authentication.
 
+###### `auth_merging`
+
+Sets the value for [AuthMerging](https://httpd.apache.org/docs/current/mod/mod_authz_core.html#authmerging), which determines if authorization logic should be combined
+
 ###### `custom_fragment`
 
 Pass a string of custom configuration directives to be placed at the end of the directory configuration.
@@ -3240,7 +3253,7 @@ Specifies [SSLCipherSuite](https://httpd.apache.org/docs/current/mod/mod_ssl.htm
 
 ##### `ssl_honorcipherorder`
 
-Sets [SSLHonorCipherOrder](https://httpd.apache.org/docs/current/mod/mod_ssl.html#sslhonorcipherorder), which is used to prefer the server's cipher preference order. Default: 'On' in the base `apache` config.
+Sets [SSLHonorCipherOrder](https://httpd.apache.org/docs/current/mod/mod_ssl.html#sslhonorcipherorder), to cause Apache to use the server's preferred order of ciphers rather than the client's preferred order. Default: true. In addition to true/false Boolean values, will also accept case-insensitive Strings 'on' or 'off'.
 
 ##### `ssl_certs_dir`
 
@@ -3314,11 +3327,15 @@ apache::vhost { 'sample.example.net':
 
 ##### `ssl_proxy_check_peer_cn`
 
-Sets the [SSLProxyMachinePeerCN](https://httpd.apache.org/docs/current/mod/mod_ssl.html#sslproxycheckpeercn) directive, which specifies whether the remote server certificate's CN field is compared against the hostname of the request URL. Valid options: 'on', 'off'. Default: undef.
+Sets the [SSLProxyCheckPeerCN](https://httpd.apache.org/docs/current/mod/mod_ssl.html#sslproxycheckpeercn) directive, which specifies whether the remote server certificate's CN field is compared against the hostname of the request URL. Valid options: 'on', 'off'. Default: undef.
 
 ##### `ssl_proxy_check_peer_name`
 
-Sets the [SSLProxyMachinePeerName](https://httpd.apache.org/docs/current/mod/mod_ssl.html#sslproxycheckpeername) directive, which specifies whether the remote server certificate's CN field is compared against the hostname of the request URL. Valid options: 'on', 'off'. Default: undef.
+Sets the [SSLProxyCheckPeerName](https://httpd.apache.org/docs/current/mod/mod_ssl.html#sslproxycheckpeername) directive, which specifies whether the remote server certificate's CN field is compared against the hostname of the request URL. Valid options: 'on', 'off'. Default: undef.
+
+##### `ssl_proxy_check_peer_expire`
+
+Sets the [SSLProxyCheckPeerExpire](https://httpd.apache.org/docs/current/mod/mod_ssl.html#sslproxycheckpeerexpire) directive, which specifies whether the remote server certificate is checked for expiration or not. Valid options: 'on', 'off'. Default: undef.
 
 ##### `ssl_options`
 
